@@ -94,3 +94,70 @@ quad_plot <- ggplot(plot_data, aes(x = x, y = y, group = id)) +
 print(quad_plot)
 
 ```
+
+```{r}
+library(tidyverse)
+
+# Selecting muscles
+selected_muscles <- c(1,2,3,4,5,6,7,8,12,13,16)
+
+# Converting data to long format
+clean_data <- transdata |>  
+  pivot_longer(starts_with("muscle"), names_to = "muscle", values_to = "coords") |>
+  select("ID", "Species", "muscle", "coords") |> 
+  mutate(muscle = gsub("muscle", "", muscle)) |>  
+  mutate(muscle = gsub("_layer", "", muscle)) |>  
+  filter(muscle %in% selected_muscles)  
+
+# Removing NULLs
+clean_data <- clean_data |> filter(sapply(coords, nrow) > 0)
+
+# Expanding coords column into individual x and y columns
+clean_data <- clean_data |>
+  mutate(
+    x1 = map_dbl(coords, ~ .x$x[1]),
+    x2 = map_dbl(coords, ~ .x$x[2]),
+    x3 = map_dbl(coords, ~ .x$x[3]),
+    x4 = map_dbl(coords, ~ .x$x[4]),
+    y1 = map_dbl(coords, ~ .x$y[1]),
+    y2 = map_dbl(coords, ~ .x$y[2]),
+    y3 = map_dbl(coords, ~ .x$y[3]),
+    y4 = map_dbl(coords, ~ .x$y[4])
+  ) |> select(-coords)  # Drop original coords column
+
+# Pivot back to wide format (each row = 1 fly)
+df_reshaped <- clean_data |> 
+  pivot_wider(names_from = muscle, values_from = c(x1, x2, x3, x4, y1, y2, y3, y4), 
+              names_glue = "muscle{muscle}_{.value}")
+
+# Save the transformed dataset
+write.csv(df_reshaped, "flies_restructured.csv", row.names = FALSE)
+
+# View first few rows
+head(df_reshaped)
+
+
+```
+
+```{r}
+# KNN prediction of species using Xs
+# have to change dataset to work 
+
+
+fly_numeric <- clean_data |> drop_na() |>
+  dplyr::select(x1, x2, x3, x4)
+
+spec <- clean_data |> drop_na() |>
+  dplyr::select(Species)
+
+knn_out <- knn(train = fly_numeric, 
+         test = fly_numeric, 
+         cl = spec$Species, 
+         k = 5)
+
+print(table(spec$species, knn_out))
+print(paste("Fraction of correct classification:", sum(spec$Species ==knn_out)/length(spec$Species)))
+
+
+
+```
