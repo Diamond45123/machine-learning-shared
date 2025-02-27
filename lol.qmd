@@ -7,7 +7,7 @@ editor: visual
 
 ## Quarto
 
-Quarto enables you to weave togkmether content and kmkmkmkm code into a finished document. To learn more about Quarto see <https://quarto.org>.
+Quarto enables you to weave togkmether content and kmkmkmkm code into a finished document. To learn gdfdfghhx about Quarto see <https://quarto.org>.
 
 ## Running Code
 
