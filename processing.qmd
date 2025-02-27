@@ -1,0 +1,96 @@
+---
+title: "Processing for Final"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+
+load("flies_data.rdata") # import the dataset
+```
+
+```{r}
+# This chunk divides the coordinates into x and y separate columns
+clean_data <- transdata |>  
+  pivot_longer(starts_with("muscle"), names_to = "muscle", values_to = "coords") |>
+  select("ID", "Species", "muscle", "coords") |> 
+  mutate(muscle = gsub("muscle", "", muscle)) |>
+  mutate(muscle = gsub("_layer", "", muscle))
+# Remove NULL elements
+clean_data <- clean_data |> filter(sapply(coords, nrow) > 0)
+# Expand the coords column into individual x and y columns
+clean_data <- clean_data |>
+  mutate(
+    x1 = map_dbl(coords, ~ .x$x[1]),
+    x2 = map_dbl(coords, ~ .x$x[2]),
+    x3 = map_dbl(coords, ~ .x$x[3]),
+    x4 = map_dbl(coords, ~ .x$x[4]),
+    y1 = map_dbl(coords, ~ .x$y[1]),
+    y2 = map_dbl(coords, ~ .x$y[2]),
+    y3 = map_dbl(coords, ~ .x$y[3]),
+    y4 = map_dbl(coords, ~ .x$y[4])
+  )
+```
+
+```{r}
+range(clean_data$x1)
+
+
+set.seed(123)  # For reproducibility
+
+# Function to generate a random quadrilateral given the x and y ranges
+generate_quadrilateral <- function(x_range, y_range) {
+  x_points <- sort(sample(x_range[1]:x_range[2], 4, replace = TRUE))
+  y_points <- sample(y_range[1]:y_range[2], 4, replace = TRUE)
+  return(c(x_points, y_points))
+}
+
+# Generate a dataset with 100 random quadrilaterals
+num_quadrilaterals <- 1000
+x_range <- c(0, 1750)
+y_range <- c(-100, 600)
+
+data <- replicate(num_quadrilaterals, generate_quadrilateral(x_range, y_range))
+
+df_quadrilaterals <- data.frame(
+  x1 = data[1, ],
+  x2 = data[2, ],
+  x3 = data[3, ],
+  x4 = data[4, ],
+  y1 = data[5, ],
+  y2 = data[6, ],
+  y3 = data[7, ],
+  y4 = data[8, ]
+)
+
+# Display the first few rows of the data
+head(df_quadrilaterals)
+
+# Function to prepare data for plotting
+prepare_plot_data <- function(df) {
+  plot_data <- data.frame()
+  for (i in 1:nrow(df)) {
+    quad <- data.frame(
+      x = c(df$x1[i], df$x2[i], df$x3[i], df$x4[i], df$x1[i]),
+      y = c(df$y1[i], df$y2[i], df$y3[i], df$y4[i], df$y1[i]),
+      id = as.factor(i)
+    )
+    plot_data <- rbind(plot_data, quad)
+  }
+  return(plot_data)
+}
+
+plot_data <- prepare_plot_data(df_quadrilaterals)
+
+# Plot the quadrilaterals
+quad_plot <- ggplot(plot_data, aes(x = x, y = y, group = id)) +
+  geom_path(color = "blue") +
+  ggtitle("Random Quadrilaterals with Connected Vertices") +
+  xlab("X-coordinate") +
+  ylab("Y-coordinate") +
+  theme_minimal()
+
+print(quad_plot)
+
+```
