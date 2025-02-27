@@ -31,10 +31,12 @@ clean_data <- clean_data |>
     y3 = map_dbl(coords, ~ .x$y[3]),
     y4 = map_dbl(coords, ~ .x$y[4])
   )
+
+drosophila_data <- clean_data |> dplyr::filter(Species == "dmelanogaster" | Species == "dsantomea")
+megaselia_data <- clean_data |> dplyr::filter(Species == "m" | Species == "dsantomea")
 ```
 
 ```{r}
-range(clean_data$x1)
 
 
 set.seed(123)  # For reproducibility
