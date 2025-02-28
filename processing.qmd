@@ -33,30 +33,127 @@ clean_data <- clean_data |>
   )
 
 drosophila_data <- clean_data |> dplyr::filter(Species == "dmelanogaster" | Species == "dsantomea")
-megaselia_data <- clean_data |> dplyr::filter(Species == "mscalaris" | Species == "mabdita")
-megaselia_data_cut |> dplyr::select(-c(coords)) |> write.csv(file="lol.csv")
+megaselia_data <- clean_data |> dplyr::filter(Species == "m" | Species == "dsantomea")
 ```
 
 ```{r}
 
-drosophila_data <- clean_data |> dplyr::filter(Species == "dmelanogaster" | Species == "dsantomea")
-megaselia_data <- clean_data |> dplyr::filter(Species == "mscalaris" | Species == "mabdita")
-megaselia_data_cut |> dplyr::select(-c(coords)) |> write.csv(file="lol.csv")
 
-# Set seed for reproducibility
-set.seed(42)
+set.seed(123)  # For reproducibility
 
-# Generate 1000 fake observations
-data <- data.frame(
-  Species = rep("fake", 1000),
-  Muscle = rep(99, 1000),
-  X = runif(1000, min = 0, max = 1750),  # Random X coordinates
-  Y = runif(1000, min = -100, max = 500) # Random Y coordinates
+# Function to generate a random quadrilateral given the x and y ranges
+generate_quadrilateral <- function(x_range, y_range) {
+  x_points <- sort(sample(x_range[1]:x_range[2], 4, replace = TRUE))
+  y_points <- sample(y_range[1]:y_range[2], 4, replace = TRUE)
+  return(c(x_points, y_points))
+}
+
+# Generate a dataset with 100 random quadrilaterals
+num_quadrilaterals <- 1000
+x_range <- c(0, 1750)
+y_range <- c(-100, 600)
+
+data <- replicate(num_quadrilaterals, generate_quadrilateral(x_range, y_range))
+
+df_quadrilaterals <- data.frame(
+  x1 = data[1, ],
+  x2 = data[2, ],
+  x3 = data[3, ],
+  x4 = data[4, ],
+  y1 = data[5, ],
+  y2 = data[6, ],
+  y3 = data[7, ],
+  y4 = data[8, ]
 )
 
-# Write to CSV
-write.csv(data, "fake_observations.csv", row.names = FALSE)
+# Display the first few rows of the data
+head(df_quadrilaterals)
 
-# Display first few rows
-head(data)
+# Function to prepare data for plotting
+prepare_plot_data <- function(df) {
+  plot_data <- data.frame()
+  for (i in 1:nrow(df)) {
+    quad <- data.frame(
+      x = c(df$x1[i], df$x2[i], df$x3[i], df$x4[i], df$x1[i]),
+      y = c(df$y1[i], df$y2[i], df$y3[i], df$y4[i], df$y1[i]),
+      id = as.factor(i)
+    )
+    plot_data <- rbind(plot_data, quad)
+  }
+  return(plot_data)
+}
+
+plot_data <- prepare_plot_data(df_quadrilaterals)
+
+# Plot the quadrilaterals
+quad_plot <- ggplot(plot_data, aes(x = x, y = y, group = id)) +
+  geom_path(color = "blue") +
+  ggtitle("Random Quadrilaterals with Connected Vertices") +
+  xlab("X-coordinate") +
+  ylab("Y-coordinate") +
+  theme_minimal()
+
+print(quad_plot)
+
+```
+
+```{r}
+library(tidyverse)
+
+# Selecting muscles
+selected_muscles <- c(1,2,3,4,5,6,7,8,12,13,16)
+
+# Converting data to long format
+clean_data <- transdata |>  
+  pivot_longer(starts_with("muscle"), names_to = "muscle", values_to = "coords") |>
+  select("ID", "Species", "muscle", "coords") |> 
+  mutate(muscle = gsub("muscle", "", muscle)) |>  
+  mutate(muscle = gsub("_layer", "", muscle)) |>  
+  filter(muscle %in% selected_muscles)  
+
+# Removing NULLs
+clean_data <- clean_data |> filter(sapply(coords, nrow) > 0)
+
+# Expanding coords column into individual x and y columns
+clean_data <- clean_data |>
+  mutate(
+    x1 = map_dbl(coords, ~ .x$x[1]),
+    x2 = map_dbl(coords, ~ .x$x[2]),
+    x3 = map_dbl(coords, ~ .x$x[3]),
+    x4 = map_dbl(coords, ~ .x$x[4]),
+    y1 = map_dbl(coords, ~ .x$y[1]),
+    y2 = map_dbl(coords, ~ .x$y[2]),
+    y3 = map_dbl(coords, ~ .x$y[3]),
+    y4 = map_dbl(coords, ~ .x$y[4])
+  ) |> select(-coords)  # Drop original coords column
+
+# Converting ack to wide format
+df_reshaped <- clean_data |> 
+  pivot_wider(names_from = muscle, values_from = c(x1, x2, x3, x4, y1, y2, y3, y4), 
+              names_glue = "muscle{muscle}_{.value}")
+
+
+```
+
+```{r}
+# KNN prediction of species using Xs
+# have to change dataset to work 
+
+
+fly_numeric <- clean_data |> drop_na() |>
+  dplyr::select(x1, x2, x3, x4)
+
+spec <- clean_data |> drop_na() |>
+  dplyr::select(Species)
+
+knn_out <- knn(train = fly_numeric, 
+         test = fly_numeric, 
+         cl = spec$Species, 
+         k = 5)
+
+print(table(spec$species, knn_out))
+print(paste("Fraction of correct classification:", sum(spec$Species ==knn_out)/length(spec$Species)))
+
+
+
 ```
