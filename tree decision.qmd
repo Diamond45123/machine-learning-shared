@@ -1,0 +1,100 @@
+---
+title: "tree decision"
+format: html
+---
+
+```{r}
+library(tidyverse)
+library(tidymodels)
+```
+
+
+```{r}
+tree_spec <- decision_tree()  |> 
+  set_engine("rpart")
+# use it for classification
+class_tree_spec <- tree_spec |> 
+  set_mode("classification")
+```
+
+
+
+```{r}
+
+megaselia_data_cut <- megaselia_data |> dplyr::filter(muscle %in% c(1:8,12,13,16))
+drosophila_data_cut <- drosophila_data |> dplyr::filter(muscle %in% c(1:8,12,13,16))
+
+
+d_split <- initial_split(drosophila_data_cut, prop = 0.75)
+
+d_train <- training(d_split)
+d_test <- testing(d_split)
+
+d_recipe <- recipe(muscle ~ ., data = d_train) |>  
+  update_role(ID, Species, coords, new_role = "ID")
+
+d_workflow <-  workflow() |> 
+  add_model(class_tree_spec) |> 
+  add_recipe(d_recipe)
+
+class_tree_fit  <- d_workflow |> 
+  fit(d_train)
+
+class_pred <- augment(class_tree_fit, new_data = d_test) 
+
+class_pred <- class_pred |> 
+  mutate(muscle = as.factor(muscle), .pred_class = as.factor(.pred_class))
+class_pred |> yardstick::accuracy(truth = muscle, estimate = .pred_class)
+
+class_pred |> yardstick::conf_mat(truth = muscle, estimate = .pred_class)
+
+```
+
+
+
+```{r}
+
+megaselia_data_cut <- megaselia_data |> dplyr::filter(muscle %in% c(1:8,12,13,16))
+drosophila_data_cut <- drosophila_data |> dplyr::filter(muscle %in% c(1:8,12,13,16))
+
+# Generate 1000 fake observations
+fake_data <- data <- data.frame(
+  Species = rep("fake", 10000),
+  muscle = rep("99", 10000),
+  x1 = runif(10000, min = 0, max = 1750),  
+  y1 = runif(10000, min = -100, max = 500), 
+  x2 = runif(10000, min = 0, max = 1750),  
+  y2 = runif(10000, min = -100, max = 500), 
+  x3 = runif(10000, min = 0, max = 1750),  # Random X coordinates
+  y3 = runif(10000, min = -100, max = 500), # Random Y coordinates
+  x4 = runif(10000, min = 0, max = 1750),  # Random X coordinates
+  y4 = runif(10000, min = -100, max = 500) # Random Y coordinates
+)
+
+drosophila_data_cut <- bind_rows(drosophila_data_cut,fake_data)
+
+d_split <- initial_split(drosophila_data_cut, prop = 0.5)
+
+d_train <- training(d_split)
+d_test <- testing(d_split)
+
+d_recipe <- recipe(muscle ~ ., data = d_train) |>  
+  update_role(ID, Species, coords, new_role = "ID")
+
+d_workflow <-  workflow() |> 
+  add_model(class_tree_spec) |> 
+  add_recipe(d_recipe)
+
+class_tree_fit  <- d_workflow |> 
+  fit(d_train)
+
+class_pred <- augment(class_tree_fit, new_data = d_test) 
+
+class_pred <- class_pred |> 
+  mutate(muscle = as.factor(muscle), .pred_class = as.factor(.pred_class))
+class_pred |> yardstick::accuracy(truth = muscle, estimate = .pred_class)
+
+class_pred |> yardstick::conf_mat(truth = muscle, estimate = .pred_class)
+
+```
+
