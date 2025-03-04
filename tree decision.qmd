@@ -6,6 +6,7 @@ format: html
 ```{r}
 library(tidyverse)
 library(tidymodels)
+library(vip)
 ```
 
 
@@ -71,9 +72,9 @@ fake_data <- data <- data.frame(
   y4 = runif(10000, min = -100, max = 500) # Random Y coordinates
 )
 
-drosophila_data_cut <- bind_rows(drosophila_data_cut,fake_data)
+drosophila_data_cut_fake <- bind_rows(drosophila_data_cut,fake_data)
 
-d_split <- initial_split(drosophila_data_cut, prop = 0.5)
+d_split <- initial_split(drosophila_data_cut_fake, prop = 0.5)
 
 d_train <- training(d_split)
 d_test <- testing(d_split)
@@ -96,5 +97,48 @@ class_pred |> yardstick::accuracy(truth = muscle, estimate = .pred_class)
 
 class_pred |> yardstick::conf_mat(truth = muscle, estimate = .pred_class)
 
+```
+
+
+```{r}
+
+d_split <- initial_split(drosophila_data_cut, prop = 0.75)
+
+d_train <- training(d_split)
+d_test <- testing(d_split)
+
+d_recipe <- recipe(muscle ~ ., data = d_train) |>  
+  update_role(ID, Species, coords, new_role = "ID")
+bagging_spec <- rand_forest(mtry = .cols()) %>%
+  set_engine("randomForest", importance = TRUE) %>%
+  set_mode("classification")
+
+d_workflow <-  workflow() |> 
+  add_model(bagging_spec) |> 
+  add_recipe(d_recipe)
+
+bagging_tree_fit  <- d_workflow |> 
+  fit(d_train)
+
+
+
+d_class_pred <- augment(bagging_tree_fit, new_data = d_test) 
+d_class_pred <- d_class_pred |> 
+  mutate(muscle = as.factor(muscle), .pred_class = as.factor(.pred_class))
+d_class_pred |> yardstick::accuracy(truth = muscle, estimate = .pred_class)
+
+d_class_pred |> yardstick::conf_mat(truth = muscle, estimate = .pred_class)
+
+
+```
+
+
+```{r}
+m_class_pred <- augment(bagging_tree_fit, new_data = megaselia_data_cut) 
+m_class_pred <- m_class_pred |> 
+  mutate(muscle = as.factor(muscle), .pred_class = as.factor(.pred_class))
+m_class_pred |> yardstick::accuracy(truth = muscle, estimate = .pred_class)
+
+m_class_pred |> yardstick::conf_mat(truth = muscle, estimate = .pred_class)
 ```
 

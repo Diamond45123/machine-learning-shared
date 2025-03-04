@@ -37,67 +37,6 @@ megaselia_data <- clean_data |> dplyr::filter(Species == "m" | Species == "dsant
 ```
 
 ```{r}
-
-
-set.seed(123)  # For reproducibility
-
-# Function to generate a random quadrilateral given the x and y ranges
-generate_quadrilateral <- function(x_range, y_range) {
-  x_points <- sort(sample(x_range[1]:x_range[2], 4, replace = TRUE))
-  y_points <- sample(y_range[1]:y_range[2], 4, replace = TRUE)
-  return(c(x_points, y_points))
-}
-
-# Generate a dataset with 100 random quadrilaterals
-num_quadrilaterals <- 1000
-x_range <- c(0, 1750)
-y_range <- c(-100, 600)
-
-data <- replicate(num_quadrilaterals, generate_quadrilateral(x_range, y_range))
-
-df_quadrilaterals <- data.frame(
-  x1 = data[1, ],
-  x2 = data[2, ],
-  x3 = data[3, ],
-  x4 = data[4, ],
-  y1 = data[5, ],
-  y2 = data[6, ],
-  y3 = data[7, ],
-  y4 = data[8, ]
-)
-
-# Display the first few rows of the data
-head(df_quadrilaterals)
-
-# Function to prepare data for plotting
-prepare_plot_data <- function(df) {
-  plot_data <- data.frame()
-  for (i in 1:nrow(df)) {
-    quad <- data.frame(
-      x = c(df$x1[i], df$x2[i], df$x3[i], df$x4[i], df$x1[i]),
-      y = c(df$y1[i], df$y2[i], df$y3[i], df$y4[i], df$y1[i]),
-      id = as.factor(i)
-    )
-    plot_data <- rbind(plot_data, quad)
-  }
-  return(plot_data)
-}
-
-plot_data <- prepare_plot_data(df_quadrilaterals)
-
-# Plot the quadrilaterals
-quad_plot <- ggplot(plot_data, aes(x = x, y = y, group = id)) +
-  geom_path(color = "blue") +
-  ggtitle("Random Quadrilaterals with Connected Vertices") +
-  xlab("X-coordinate") +
-  ylab("Y-coordinate") +
-  theme_minimal()
-
-print(quad_plot)
-
-```
-
-```{r}
 library(tidyverse)
 
 # Selecting muscles
