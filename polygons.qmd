@@ -1,0 +1,147 @@
+---
+title: "polygons"
+format: html
+editor: visual
+---
+
+```{r Method I (does not really work)}
+# Load necessary library
+library(ggplot2)
+set.seed(100)
+
+# Generate four random points with x and y in the range [0, 1000]
+points <- data.frame(
+  x = runif(4, min = 0, max = 1000),
+  y = runif(4, min = 0, max = 1000)
+)
+
+# Compute the centroid of the points
+center <- colMeans(points)
+
+# Calculate the angle of each point relative to the centroid
+points$angle <- atan2(points$y - center[2], points$x - center[1])
+
+# Sort the points by angle to ensure a convex order
+points_sorted <- points[order(points$angle), ]
+
+# Close the polygon by repeating the first point at the end
+points_sorted <- rbind(points_sorted, points_sorted[1, ])
+
+# Plot the convex quadrilateral using ggplot2
+ggplot(points_sorted, aes(x = x, y = y)) +
+  geom_polygon(fill = "lightblue", color = "darkblue") +
+  geom_point(size = 3) +
+  coord_equal() +
+  ggtitle("Random Convex Quadrilateral")
+
+```
+
+```{r Method 2 (Potential)}
+library(ggplot2)
+
+generate_convex <- function(){
+  repeat {
+    pts <- matrix(runif(8, min = -100, max = 100), ncol = 2)
+    if (length(chull(pts)) == 4) {
+      pts <- pts[chull(pts), ]
+      return(pts)
+    }
+  }
+}
+```
+
+```{r find area restriction}
+
+first8 <- 
+  clean_data |>
+  filter(muscle %in% c(1:8)) |>
+  select(4:11)
+
+# Calculate areas of quads
+area_quad <- function(x, y) {
+  area <- 0.5 * abs(x[1]*y[2] + x[2]*y[3] + x[3]*y[4] + x[4]*y[1] -
+                    (y[1]*x[2] + y[2]*x[3] + y[3]*x[4] + y[4]*x[1]))
+   return(area)
+}
+
+areas <- apply(first8, 1, function(row) {
+  # Extract x and y 
+  xs <- as.numeric(row[1:4])
+  ys <- as.numeric(row[5:8])
+  area_quad(xs, ys)
+})
+
+first8$area <- areas
+summary(first8$area)
+
+# Set boundaries
+q3 <- 53928
+q1 <- 23990
+```
+
+```{r apply area restriction}
+generate_convex <- function(lower, upper){
+  repeat {
+    pts <- matrix(runif(8, min = -100, max = 100), ncol = 2)
+    if(length(chull(pts)) == 4) {
+      pts <- pts[chull(pts), ]
+      area <- 0.5 * abs( pts[1,1]*pts[2,2] + pts[2,1]*pts[3,2] + 
+                         pts[3,1]*pts[4,2] + pts[4,1]*pts[1,2] -
+                        (pts[1,2]*pts[2,1] + pts[2,2]*pts[3,1] + 
+                         pts[3,2]*pts[4,1] + pts[4,2]*pts[1,1]) )
+      if(area >= lower && area <= upper) {
+        return(pts)
+      }
+    }
+  }
+}
+
+points <- generate_convex(q1,q3)
+
+```
+
+
+```{r bootstrapping-like (Method III)}
+
+generate_convex <- function(df, lower, upper) {
+  repeat {
+    # Sample from their distribution
+    x1 <- sample(df$x1, 1)
+    x2 <- sample(df$x2, 1)
+    x3 <- sample(df$x3, 1)
+    x4 <- sample(df$x4, 1)
+    y1 <- sample(df$y1, 1)
+    y2 <- sample(df$y2, 1)
+    y3 <- sample(df$y3, 1)
+    y4 <- sample(df$y4, 1)
+    
+    # Create a matrix of points
+    pts <- matrix(c(x1, x2, x3, x4, y1, y2, y3, y4), ncol = 2)
+    
+    # Convex test
+    if (length(chull(pts)) == 4) {
+      pts <- pts[chull(pts), ]
+      
+      # Area test
+      area <- 0.5 * abs( pts[1,1]*pts[2,2] + pts[2,1]*pts[3,2] + 
+                         pts[3,1]*pts[4,2] + pts[4,1]*pts[1,2] -
+                         (pts[1,2]*pts[2,1] + pts[2,2]*pts[3,1] + 
+                          pts[3,2]*pts[4,1] + pts[4,2]*pts[1,1]) )
+      
+      # Return the quadrilateral if both are satisfied
+      if (area >= lower && area <= upper) {
+        return(pts)
+      }
+    }
+  }
+}
+
+point <- generate_convex(first8,q1,q3)
+points <- replicate(50,generate_convex(first8,q1,q3),simplify = F)
+
+# Extract features
+matrix <- t(sapply(points, function(mat) c(mat[,1], mat[,2])))
+colnames(matrix) <- c("x1", "x2", "x3", "x4", "y1", "y2", "y3", "y4")
+fake_df <- as.data.frame(matrix)
+fake_df$muscle <- 99
+```
