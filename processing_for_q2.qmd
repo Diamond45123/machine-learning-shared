@@ -1,0 +1,94 @@
+---
+title: "processing_for_q2"
+format: html
+editor: visual
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r completness}
+
+library(dplyr)
+df = clean_data
+i = 8
+
+indices <- seq(1,i)
+full <- length(indices)
+
+df_subset <- df %>%
+  filter(muscle %in% indices)
+
+complete_subjects <- df_subset %>%
+  group_by(ID) %>%
+  summarise(muscle_count = n_distinct(muscle),
+            species = first(Species)) %>%
+  filter(muscle_count == full)
+
+nrow(complete_subjects)
+
+library(dplyr)
+
+# Completeness test
+df = clean_data
+i = 8 # keep first 8
+
+indices <- seq(1,i)
+full <- length(indices)
+
+df_subset <- df %>%
+  filter(muscle %in% indices)
+
+complete_subjects <- df_subset %>%
+  group_by(ID) %>%
+  summarise(muscle_count = n_distinct(muscle),
+            species = first(Species)) %>%
+  filter(muscle_count == full)
+
+complete_df <- 
+  transdata |>
+  filter(ID %in% complete_subjects$ID)
+
+# select the first 8
+q2_subset <- 
+  complete_df |>
+  select(muscle1_layer,muscle2_layer,muscle3_layer,muscle4_layer ,muscle5_layer,muscle6_layer,muscle7_layer,muscle8_layer)
+
+# Extraction function
+flatten_muscle <- function(cell) {
+  df_muscle <- cell[[1]]  # Extract the contained 4x2 data frame
+  # Combine: first the 4 'x' values, then the 4 'y' values
+  c(df_muscle[["x"]], df_muscle[["y"]])
+}
+
+# Process each individual
+new_data <- t(sapply(1:nrow(q2_subset), function(i) {
+  row_data <- as.list(q2_subset[i, ])
+  unlist(lapply(row_data, flatten_muscle))
+}))
+
+# Create the new colnames
+col_names <- c()
+for(j in 1:ncol(q2_subset)) {
+  col_names <- c(col_names,
+                 paste0("m", j, "x", 1:4),
+                 paste0("m", j, "y", 1:4))
+}
+
+colnames(new_data) <- col_names
+new_df <- as.data.frame(new_data)
+
+# bring in species
+new_df$species <- complete_df$Species
+
+write.csv(new_df,"q2_data.csv")
+```
+
+You can add options to executable code like this
+
+The `echo: false` option disables the printing of code (only output is displayed).
