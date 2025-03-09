@@ -33,6 +33,11 @@ drosophila_km <- augment(kmeans_fit, new_data = d_clustering_data)
 fviz_cluster(list(data = d_clustering_data, cluster = drosophila_km$.pred_cluster),
 ellipse.type = "norm", geom = "point", stand = FALSE, palette = "Set3", ggtheme = theme_classic())
 
+megaselia_km <- augment(kmeans_fit, new_data = m_clustering_data) 
+
+fviz_cluster(list(data = m_clustering_data, cluster = megaselia_km$.pred_cluster),
+ellipse.type = "norm", geom = "point", stand = FALSE, palette = "Set3", ggtheme = theme_classic())
+
 table(drosophila_data_cut$muscle, drosophila_km$.pred_cluster) # compare the clustering labels with the species
 ```
 
