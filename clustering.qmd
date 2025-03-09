@@ -1,0 +1,84 @@
+---
+title: "clustering"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(tidymodels)
+library(vip)
+library(cluster)
+library(ggmap) # for ggimage
+library(ggfortify) # for autoplot
+library(factoextra)
+library(NbClust)
+library(tidyclust)
+library(janitor)
+```
+
+```{r}
+d_clustering_data <- drosophila_data |> 
+  filter(muscle %in% c(1:8, 12, 13, 16)) |>
+  select(-c(ID, Species, coords,muscle))  # Drop non-numeric columns
+kmeans_spec <- k_means(num_clusters = 11) |>
+  set_mode("partition") |>
+  set_engine("stats") |>
+  set_args(nstart = 25)
+kmeans_fit <- kmeans_spec |>  fit(~. , data = d_clustering_data)
+
+
+drosophila_km <- augment(kmeans_fit, new_data = d_clustering_data) 
+
+fviz_cluster(list(data = d_clustering_data, cluster = drosophila_km$.pred_cluster),
+ellipse.type = "norm", geom = "point", stand = FALSE, palette = "Set3", ggtheme = theme_classic())
+
+table(drosophila_data_cut$muscle, drosophila_km$.pred_cluster) # compare the clustering labels with the species
+```
+
+Now, we do the same thing but for megaselia data:
+
+```{r}
+m_clustering_data <- megaselia_data |> 
+  filter(muscle %in% c(1:8, 12, 13, 16)) |>
+  select(-c(ID, Species, coords,muscle))  # Drop non-numeric columns
+kmeans_spec <- k_means(num_clusters = 11) |>
+  set_mode("partition") |>
+  set_engine("stats") |>
+  set_args(nstart = 25)
+kmeans_fit <- kmeans_spec |>  fit(~. , data = m_clustering_data)
+
+
+megaselia_km <- augment(kmeans_fit, new_data = m_clustering_data) 
+
+fviz_cluster(list(data = m_clustering_data, cluster = megaselia_km$.pred_cluster),
+ellipse.type = "norm", geom = "point", stand = FALSE, palette = "Set3", ggtheme = theme_classic())
+
+table(megaselia_data_cut$muscle, megaselia_km$.pred_cluster) # compare the clustering labels with the species
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+# Add species column for differentiation
+drosophila_km <- drosophila_km |> mutate(Species = "Drosophila")
+megaselia_km <- megaselia_km |> mutate(Species = "Megaselia")
+
+# Combine both datasets
+combined_km <- bind_rows(drosophila_km, megaselia_km)
+
+# Ensure your dataset has meaningful dimensions for visualization (PCA recommended)
+pca_data <- prcomp(combined_km |> select(-.pred_cluster, -Species))
+combined_km$PC1 <- pca_data$x[,1]
+combined_km$PC2 <- pca_data$x[,2]
+
+# Plot combined clustering results
+ggplot(combined_km, aes(x = PC1, y = PC2)) +
+  geom_point(aes(color = Species, shape = as.factor(.pred_cluster)), size = 3, alpha = 0.7) +
+  scale_color_manual(values = c("Drosophila" = "blue", "Megaselia" = "red")) + # Adjust colors
+  theme_classic() +
+  labs(title = "Cluster Comparison Between Drosophila and Megaselia",
+       color = "Species",
+       shape = "Cluster")
+```

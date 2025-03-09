@@ -33,7 +33,7 @@ clean_data <- clean_data |>
   )
 
 drosophila_data <- clean_data |> dplyr::filter(Species == "dmelanogaster" | Species == "dsantomea")
-megaselia_data <- clean_data |> dplyr::filter(Species == "m" | Species == "dsantomea")
+megaselia_data <- clean_data |> dplyr::filter(Species == "mabdita" | Species == "mscalaris")
 ```
 
 ```{r}

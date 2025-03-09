@@ -53,8 +53,8 @@ class_pred |> yardstick::conf_mat(truth = muscle, estimate = .pred_class)
 
 ```{r}
 
-megaselia_data_cut <- megaselia_data |> dplyr::filter(muscle %in% c(1:8,12,13,16))
-drosophila_data_cut <- drosophila_data |> dplyr::filter(muscle %in% c(1:8,12,13,16))
+megaselia_data_cut <- megaselia_data |> dplyr::filter(muscle %in% c(1:8))
+drosophila_data_cut <- drosophila_data |> dplyr::filter(muscle %in% c(1:8))
 n <- 100
 # Generate 1000 fake observations
 fake_data <- data <- data.frame(
@@ -147,14 +147,13 @@ d_class_pred <- augment(bagging_tree_fit, new_data = d_test)
 d_class_pred <- d_class_pred |> 
   mutate(muscle = as.factor(muscle), .pred_class = as.factor(.pred_class))
 d_class_pred |> yardstick::accuracy(truth = muscle, estimate = .pred_class)
-
 d_class_pred |> yardstick::conf_mat(truth = muscle, estimate = .pred_class)
 
 
 ```
 
 ```{r}
-m_class_pred <- augment(bagging_tree_fit, new_data = megaselia_data_cut) 
+m_class_pred <- augment(bagging_tree_fit, new_data = megaselia_data_cut_fake) 
 m_class_pred <- m_class_pred |> 
   mutate(muscle = as.factor(muscle), .pred_class = as.factor(.pred_class))
 m_class_pred |> yardstick::accuracy(truth = muscle, estimate = .pred_class)
@@ -163,28 +162,25 @@ m_class_pred |> yardstick::conf_mat(truth = muscle, estimate = .pred_class)
 ```
 
 ```{r}
-drosophila_data_cut <- drosophila_data |> 
-  #filter(muscle %in% c(1:8, 12, 13, 16)) |>
-  select(-c(ID, Species, coords))  # Drop non-numeric columns
+drosophila_data_cut_clustering <- drosophila_data |> 
+  filter(muscle %in% c(1:8, 12, 13, 16)) |>
+  select(-c(ID, Species, coords,muscle))  # Drop non-numeric columns
 
-drosophila_data_cut <- drosophila_data_cut |>
-  mutate(centroid_x = (x1 + x2 + x3 + x4) / 4,
-         centroid_y = (y1 + y2 + y3 + y4) / 4,
-         aspect_ratio = (x2 - x1) / (y3 - y1)) |>
-  select(centroid_x, centroid_y, aspect_ratio) 
+#drosophila_data_cut <- drosophila_data_cut |>
+ # mutate(centroid_x = (x1 + x2 + x3 + x4) / 4,
+  #       centroid_y = (y1 + y2 + y3 + y4) / 4,
+   #      aspect_ratio = (x2 - x1) / (y3 - y1)) |>
+#  select(centroid_x, centroid_y, aspect_ratio) 
 
-# Standardize Data (important for clustering)
-drosophila_scaled <- scale(drosophila_data_cut)
-
-dist_matrix <- dist(drosophila_scaled, method = "euclidean")
+dist_matrix <- dist(drosophila_data_cut_clustering, method = "euclidean")
 hc <- hclust(dist_matrix, method = "complete")
 
 drosophila_data_cut$Cluster <- cutree(hc, k = 11)
 
 # Step 3: Fit K-Means for Alternative Clustering (k = 11)
 set.seed(42)
-kmeans_model <- kmeans(drosophila_scaled, centers = 11, nstart = 25)
-fviz_cluster(kmeans_model, data = drosophila_scaled, geom = "point")
+kmeans_model <- kmeans(drosophila_data_cut_clustering, centers = 11, nstart = 25)
+#fviz_cluster(kmeans_model, data = drosophila_data_cut, geom = "point")
 
 # Store Cluster Labels
 drosophila_data_cut$KMeans_Cluster <- kmeans_model$cluster
@@ -192,4 +188,5 @@ drosophila_data_cut$KMeans_Cluster <- kmeans_model$cluster
 # View Clustered Data
 head(drosophila_data_cut)
 
+table(drosophila_data_cut_clustering$KMeans_Cluster, drosophila_data_cut$muscle)
 ```
